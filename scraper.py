@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import json
 import os,sys
-
+import pandas as pd
 
 username = "eligra1"
 password = "VR8469"
@@ -119,13 +119,14 @@ def PolicyBilling(session, searchKey):
     getCookie(soup)
     return session
 
-def PolicyDocument(session):
+def PolicyDocument(session, searchKey):
     global header
     global RadScriptManager1_TSM, RadStyleSheetManager1_TSSM, __VIEWSTATEFIELDCOUNT, __VIEWSTATES, __VIEWSTATEGENERATOR, __EVENTVALIDATION
 
     res = session.get("https://policy.velocityrisk.com/PolicyDocuments.aspx", headers=header)
     soup = BeautifulSoup(res.text, "html.parser")
     pdfNames = []
+    documentIDs = []
     try:
         trs = soup.find('table',{'id':'ctl01_RadGridExistingAttachments_ctl00'}).find_all('tbody')[0].find_all('tr')
         for tr in trs:
@@ -133,6 +134,7 @@ def PolicyDocument(session):
             for td in tds:
                 if "pdf" in td.text:
                     pdfNames.append(td.text)
+            documentIDs.append(tds[4].text)
     except:
         pass
 
@@ -153,20 +155,24 @@ def PolicyDocument(session):
     for i in range(int(__VIEWSTATEFIELDCOUNT)):
         if i == 0:postData.update({'__VIEWSTATE': __VIEWSTATES.get("__VIEWSTATE")})
         else:postData.update({'__VIEWSTATE' + str(i): __VIEWSTATES.get("__VIEWSTATE" + str(i))})
-    res = session.post("https://policy.velocityrisk.com/PolicyDocuments.aspx", data=postData)
+    session.post("https://policy.velocityrisk.com/PolicyDocuments.aspx", data=postData)
 
-    for name in pdfNames:
-        fileName = name
-        url = "https://policy.velocityrisk.com/FileServe.aspx?DocumentId=749572&Source=POLICY"
+
+    for id in range(len(pdfNames)):
+        fileName = searchKey + "-" + pdfNames[id]
+        url = "https://policy.velocityrisk.com/FileServe.aspx?DocumentId=" + documentIDs[id] + "&Source=POLICY"
         r = session.get(url)
-        with open(fileName, 'wb') as f:
+        with open("downloads/" + fileName, 'wb') as f:
             f.write(r.content)
     return session
 
 def main():
     session = login()
-    session = PolicyBilling(session,"VUW-HW-574029")
-    session = PolicyDocument(session)
+    file = pd.read_excel("policykey.xls",sheet_name='RadGridExport')
+    searchKeys = file['Policy #']._ndarray_values
+    for key in searchKeys:
+        session = PolicyBilling(session,key)
+        PolicyDocument(session,key)
 
 
 if __name__ == "__main__":
