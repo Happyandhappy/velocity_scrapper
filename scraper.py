@@ -14,9 +14,17 @@ def getCookie(soup):
     global RadScriptManager1_TSM, RadStyleSheetManager1_TSSM, __VIEWSTATEFIELDCOUNT, __VIEWSTATES,__VIEWSTATEGENERATOR,__EVENTVALIDATION
     try:
         RadScriptManager1_TSM = soup.find('input', {'id': 'RadScriptManager1_TSM'}).get('value')
+    except:pass
+    try:
         RadStyleSheetManager1_TSSM = soup.find('input', {'id': 'RadStyleSheetManager1_TSSM'}).get('value')
+    except:pass
+    try:
         __VIEWSTATEFIELDCOUNT = soup.find('input', {'id': '__VIEWSTATEFIELDCOUNT'}).get('value')
+    except:pass
+    try:
         __VIEWSTATES = {}
+    except:pass
+    try:
         for i in range(int(__VIEWSTATEFIELDCOUNT)):
             if i == 0:
                 try:
@@ -35,6 +43,20 @@ def getCookie(soup):
         __EVENTVALIDATION = soup.find('input', {'id': '__EVENTVALIDATION'}).get('value')
     except:
         pass
+
+def getPostData():
+    postData = {
+        'ctl00$RadScriptManager1': 'ctl00$ctl00$ContentPlaceHolderBody$trsPolicyPanel|ctl00$ContentPlaceHolderBody$trsPolicy',
+        'RadScriptManager1_TSM': RadScriptManager1_TSM, 'RadStyleSheetManager1_TSSM': RadStyleSheetManager1_TSSM,
+        '__EVENTTARGET': 'ctl00$ContentPlaceHolderBody$trsPolicy',
+        '__VIEWSTATEFIELDCOUNT': __VIEWSTATEFIELDCOUNT, '__VIEWSTATEGENERATOR': __VIEWSTATEGENERATOR,
+    }
+    for i in range(int(__VIEWSTATEFIELDCOUNT)):
+        if i == 0:
+            postData.update({'__VIEWSTATE': __VIEWSTATES.get("__VIEWSTATE")})
+        else:
+            postData.update({'__VIEWSTATE' + str(i): __VIEWSTATES.get("__VIEWSTATE" + str(i))})
+    return postData
 
 def login():
     session = requests.session()
@@ -67,10 +89,85 @@ def login():
     getCookie(soup)
     return session
 
+def PolicyBilling(session, searchKey):
+    global policyVals, policyKeys, policyUrl, header
+    global RadScriptManager1_TSM, RadStyleSheetManager1_TSSM, __VIEWSTATEFIELDCOUNT, __VIEWSTATES, __VIEWSTATEGENERATOR, __EVENTVALIDATION
+    """get policy data & get Hidden fields & Policy History data"""
+    ActionUrl = "https://policy.velocityrisk.com/HomeItems/ActionItems.aspx"
+    res = session.get(ActionUrl)
+    soup = BeautifulSoup(res.text, "html.parser")
+    getCookie(soup)
+
+    postData = {
+        'RadScriptManager1_TSM': RadScriptManager1_TSM,
+        'RadStyleSheetManager1_TSSM': RadStyleSheetManager1_TSSM,
+        '__VIEWSTATEFIELDCOUNT': __VIEWSTATEFIELDCOUNT,
+        '__VIEWSTATEGENERATOR': __VIEWSTATEGENERATOR,
+        '__EVENTVALIDATION': __EVENTVALIDATION,
+        'ctl00$ContentPlaceHolderBody$TopNavOne1$txtPolicyIdWithprefix': searchKey,
+        'ctl00$ContentPlaceHolderBody$TopNavOne1$btnGoId': 'GO',
+        'ctl00$ContentPlaceHolderBody$ActionItems1$ddlActionItemType': 'ALL',
+        'ctl00$ContentPlaceHolderBody$ActionItems1$ddlAgencyProducer': 'Producer',
+        'ctl00$ContentPlaceHolderBody$ActionItems1$ddlPolicyStatus': 'ALL',
+        'ctl00$ContentPlaceHolderBody$ActionItems1$HiddenSource': 'PENDING'
+    }
+    for i in range(int(__VIEWSTATEFIELDCOUNT)):
+        if i == 0:postData.update({'__VIEWSTATE': __VIEWSTATES.get("__VIEWSTATE")})
+        else:postData.update({'__VIEWSTATE' + str(i): __VIEWSTATES.get("__VIEWSTATE" + str(i))})
+    res = session.post(ActionUrl, data=postData)
+    soup = BeautifulSoup(res.text, "html.parser")
+    getCookie(soup)
+    return session
+
+def PolicyDocument(session):
+    global header
+    global RadScriptManager1_TSM, RadStyleSheetManager1_TSSM, __VIEWSTATEFIELDCOUNT, __VIEWSTATES, __VIEWSTATEGENERATOR, __EVENTVALIDATION
+
+    res = session.get("https://policy.velocityrisk.com/PolicyDocuments.aspx", headers=header)
+    soup = BeautifulSoup(res.text, "html.parser")
+    pdfNames = []
+    try:
+        trs = soup.find('table',{'id':'ctl01_RadGridExistingAttachments_ctl00'}).find_all('tbody')[0].find_all('tr')
+        for tr in trs:
+            tds = tr.find_all('td')
+            for td in tds:
+                if "pdf" in td.text:
+                    pdfNames.append(td.text)
+    except:
+        pass
+
+    # getCookie(soup)
+
+    postData = {
+        'RadScriptManager1_TSM': RadScriptManager1_TSM,
+        'RadStyleSheetManager1_TSSM': RadStyleSheetManager1_TSSM,
+        '__VIEWSTATEFIELDCOUNT': __VIEWSTATEFIELDCOUNT,
+        '__VIEWSTATEGENERATOR': __VIEWSTATEGENERATOR,
+        '__EVENTVALIDATION': __EVENTVALIDATION,
+        'RadScriptManager1': 'ctl01$ctl01$RadGridExistingAttachmentsPanel|ctl01$RadGridExistingAttachments$ctl00$ctl04$ctl00',
+        'ctl01$HiddenFieldMode': 'FileUpload',
+        '__EVENTTARGET': 'ctl01$RadGridExistingAttachments$ctl00$ctl04$ctl00',
+        'RadAJAXControlID': 'ctl01_RadAjaxManagerPolicyDocs'
+    }
+
+    for i in range(int(__VIEWSTATEFIELDCOUNT)):
+        if i == 0:postData.update({'__VIEWSTATE': __VIEWSTATES.get("__VIEWSTATE")})
+        else:postData.update({'__VIEWSTATE' + str(i): __VIEWSTATES.get("__VIEWSTATE" + str(i))})
+    res = session.post("https://policy.velocityrisk.com/PolicyDocuments.aspx", data=postData)
+
+    for name in pdfNames:
+        fileName = name
+        url = "https://policy.velocityrisk.com/FileServe.aspx?DocumentId=749572&Source=POLICY"
+        r = session.get(url)
+        with open(fileName, 'wb') as f:
+            f.write(r.content)
+    return session
 
 def main():
     session = login()
-    
+    session = PolicyBilling(session,"VUW-HW-574029")
+    session = PolicyDocument(session)
+
 
 if __name__ == "__main__":
     main()
