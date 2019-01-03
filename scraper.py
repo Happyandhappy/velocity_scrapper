@@ -891,7 +891,7 @@ def getLossHistory(session, searchKey):
     soup = BeautifulSoup(res.text, "html.parser")
     data = []
     div = soup.find('div', id='ContentPlaceHolderBody_LossHistoryBody_pnlLossHistory')
-    table = div.find_all('table', id='ContentPlaceHolderBody_LossHistoryBody_TableClaimHistory')
+    table = div.find('table', id='ContentPlaceHolderBody_LossHistoryBody_TableClaimHistory')
     if table:
         table1 = table.find('table', id='ContentPlaceHolderBody_LossHistoryBody_RadGridLossHistory_ctl00')
         if table1:
@@ -900,12 +900,12 @@ def getLossHistory(session, searchKey):
                 for tr in trs:
                     tds = tr.find_all('td')
                     if len(tds) > 5:
-                        ClaimNumber = tds[0].text
-                        LossDate = tds[1].text
-                        LossLocation = tds[2].text
-                        LossType = tds[3].text
-                        LossAmount = tds[4].text
-                        PriorClaimStatus = tds[5].text
+                        ClaimNumber = tds[0].text.replace('\r','').replace('\t','').replace('\n','')
+                        LossDate = tds[1].text.replace('\r','').replace('\t','').replace('\n','')
+                        LossLocation = tds[2].text.replace('\r','').replace('\t','').replace('\n','')
+                        LossType = tds[3].text.replace('\r','').replace('\t','').replace('\n','')
+                        LossAmount = tds[4].text.replace('\r','').replace('\t','').replace('\n','')
+                        PriorClaimStatus = tds[5].text.replace('\r','').replace('\t','').replace('\n','')
                         dt = {
                             "Claim Number" : ClaimNumber,
                             "Loss Date" : LossDate,
@@ -915,7 +915,7 @@ def getLossHistory(session, searchKey):
                             "Prior Claim Status" : PriorClaimStatus
                         }
                         data.append(dt)
-    return {"key":["LossHistory"],"val":data}
+    return {"key":["LossHistory"],"val":[json.dumps(data)]}
 
 def Scrapping_Unit(searchKey):
     session = login()
