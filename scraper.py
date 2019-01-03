@@ -185,6 +185,10 @@ def login():
     getCookie(soup)
     return session
 
+"""
+ def for download excel file
+"""
+
 def excel_download():
     session = login()
     """get policy key excel file"""
@@ -214,9 +218,11 @@ def excel_download():
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.99 Safari/537.36',
         'Content-Type': 'application/x-www-form-urlencoded'}
     res = session.post(url,data=postData,headers = header)
+    """ download and save excel file as named 'policykey.xls' """
     with open('policykey.xls', 'wb') as file:
         file.write(res.content)
     file.close()
+
 
 def gotoActionItemsPage(session,searchKey):
     ActionUrl = "https://policy.velocityrisk.com/HomeItems/ActionItems.aspx"
@@ -245,6 +251,7 @@ def gotoActionItemsPage(session,searchKey):
     soup = BeautifulSoup(res.text, "html.parser")
     getCookie(soup)
     return session
+
 
 def getPolicyBilling(session,searchKey):
     global policyVals, policyKeys, policyUrl, header
@@ -870,6 +877,7 @@ def getBuilding(session, searchKey):
 
 """
     added on 01/03/2019
+    def for get LossHistory tab
 """
 def getLossHistory(session, searchKey):
     global product, policyUrl, header
@@ -896,6 +904,7 @@ def getLossHistory(session, searchKey):
         table1 = table.find('table', id='ContentPlaceHolderBody_LossHistoryBody_RadGridLossHistory_ctl00')
         if table1:
             trs = table1.find_all('tr')
+            """ check if table is empty or not """
             if len(trs) > 1:
                 for tr in trs:
                     tds = tr.find_all('td')
@@ -945,7 +954,7 @@ def Scrapping_Unit(searchKey):
         outputCSV(csvfile4, csvhead, csvdata)
 
 if __name__ == "__main__":
-    # excel_download()
+    excel_download()
     file = pd.read_excel("policykey.xls",sheet_name='RadGridExport')
     searchKeys = file['Policy #']._ndarray_values
     for key in searchKeys:
